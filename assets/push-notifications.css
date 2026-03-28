@@ -1,0 +1,436 @@
+/**
+ * Push Notifications Plugin - Styles
+ *
+ * Matches osTicketAwesome theme nav bar icon style.
+ *
+ * @author  ChesnoTech
+ * @version 1.1.0
+ */
+
+/* ============================================================
+   Bell + Gear wrapper in nav
+   ============================================================ */
+#nav .push-notify-wrapper {
+    display: inline-block;
+    margin: 0 0 0 6px;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+#nav .push-notify-toggle {
+    display: inline-block;
+    padding: 0;
+    color: #fff;
+    text-decoration: none !important;
+    cursor: pointer;
+    vertical-align: top;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+#nav .push-notify-toggle:hover {
+    opacity: 1;
+    text-decoration: none !important;
+}
+
+#nav .push-notify-toggle.push-active {
+    opacity: 1;
+}
+
+#nav .push-notify-toggle.push-active .push-bell-svg {
+    filter: drop-shadow(0 0 3px rgba(52, 152, 219, 0.6));
+}
+
+#nav .push-bell-svg {
+    width: 18px !important;
+    height: 18px !important;
+    position: relative;
+    top: 4px;
+    transition: transform 0.15s ease;
+}
+
+#nav .push-notify-toggle:hover .push-bell-svg {
+    transform: scale(1.15);
+}
+
+/* Gear icon next to bell */
+#nav .push-notify-gear {
+    display: none; /* hidden until subscribed */
+    margin-left: 2px;
+    padding: 0;
+    color: #fff;
+    text-decoration: none !important;
+    cursor: pointer;
+    vertical-align: top;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+#nav .push-notify-gear .push-gear-svg {
+    width: 13px !important;
+    height: 13px !important;
+    position: relative;
+    top: 1.5px;
+}
+
+#nav .push-notify-gear:hover {
+    opacity: 1;
+    text-decoration: none !important;
+}
+
+/* ============================================================
+   Toast notification
+   ============================================================ */
+.push-notify-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 400px;
+    z-index: 99999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.push-notify-toast-hide {
+    opacity: 0;
+}
+
+body.dark-mode .push-notify-toast {
+    background: #555;
+}
+
+/* ============================================================
+   Preferences Modal — Overlay
+   ============================================================ */
+.push-prefs-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.push-prefs-overlay-hide {
+    opacity: 0;
+}
+
+/* ============================================================
+   Preferences Modal — Container
+   ============================================================ */
+.push-prefs-modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 440px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+body.dark-mode .push-prefs-modal {
+    background: #2a2a2a;
+    color: #ddd;
+}
+
+/* Header */
+.push-prefs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+body.dark-mode .push-prefs-header {
+    border-bottom-color: #444;
+}
+
+.push-prefs-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+body.dark-mode .push-prefs-header h3 {
+    color: #eee;
+}
+
+.push-prefs-close {
+    font-size: 22px;
+    color: #999;
+    text-decoration: none !important;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.push-prefs-close:hover {
+    color: #333;
+}
+
+body.dark-mode .push-prefs-close:hover {
+    color: #fff;
+}
+
+/* Body (scrollable) */
+.push-prefs-body {
+    padding: 12px 20px 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Loading state */
+.push-prefs-loading {
+    padding: 40px 20px;
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+}
+
+/* Section */
+.push-prefs-section {
+    margin-bottom: 20px;
+}
+
+.push-prefs-section:last-child {
+    margin-bottom: 0;
+}
+
+.push-prefs-section h4 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+}
+
+body.dark-mode .push-prefs-section h4 {
+    color: #aaa;
+}
+
+.push-prefs-hint {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: #999;
+    line-height: 1.4;
+}
+
+/* Toggle switch rows */
+.push-prefs-toggle {
+    display: flex;
+    align-items: center;
+    padding: 7px 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.push-prefs-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.push-prefs-toggle-slider {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 10px;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.push-prefs-toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.push-prefs-toggle input:checked + .push-prefs-toggle-slider {
+    background: #3498db;
+}
+
+.push-prefs-toggle input:checked + .push-prefs-toggle-slider::after {
+    transform: translateX(16px);
+}
+
+body.dark-mode .push-prefs-toggle-slider {
+    background: #555;
+}
+
+body.dark-mode .push-prefs-toggle input:checked + .push-prefs-toggle-slider {
+    background: #2980b9;
+}
+
+.push-prefs-toggle-label {
+    margin-left: 10px;
+    font-size: 13px;
+    color: #444;
+}
+
+body.dark-mode .push-prefs-toggle-label {
+    color: #ccc;
+}
+
+/* Quiet hours row */
+.push-prefs-quiet {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.push-prefs-quiet label {
+    font-size: 13px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body.dark-mode .push-prefs-quiet label {
+    color: #bbb;
+}
+
+.push-prefs-quiet input[type="time"] {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+    color: #333;
+}
+
+body.dark-mode .push-prefs-quiet input[type="time"] {
+    background: #333;
+    border-color: #555;
+    color: #ddd;
+}
+
+.push-prefs-quiet-clear {
+    font-size: 12px;
+    color: #999;
+    text-decoration: none !important;
+}
+
+.push-prefs-quiet-clear:hover {
+    color: #e74c3c;
+}
+
+/* Footer */
+.push-prefs-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid #e5e5e5;
+}
+
+body.dark-mode .push-prefs-footer {
+    border-top-color: #444;
+}
+
+.push-prefs-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.push-prefs-btn-cancel {
+    background: #e5e5e5;
+    color: #555;
+}
+
+.push-prefs-btn-cancel:hover {
+    background: #d5d5d5;
+}
+
+body.dark-mode .push-prefs-btn-cancel {
+    background: #444;
+    color: #ccc;
+}
+
+body.dark-mode .push-prefs-btn-cancel:hover {
+    background: #555;
+}
+
+.push-prefs-btn-save {
+    background: #3498db;
+    color: #fff;
+}
+
+.push-prefs-btn-save:hover {
+    background: #2980b9;
+}
+
+.push-prefs-btn-save:disabled {
+    background: #89c4e8;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   Mobile
+   ============================================================ */
+#right-buttons .push-notify-toggle {
+    opacity: 1;
+}
+
+#right-buttons .push-notify-toggle svg path {
+    fill: var(--mobile-link-color, #888);
+}
+
+#right-buttons .push-notify-toggle.push-active svg path {
+    fill: #3498db;
+}
+
+/* Mobile gear icon */
+#right-buttons .push-notify-gear-mobile {
+    display: none; /* hidden until subscribed */
+    opacity: 0.7;
+}
+
+#right-buttons .push-notify-gear-mobile svg path {
+    fill: var(--mobile-link-color, #888);
+}
+
+#right-buttons .push-notify-gear-mobile:active {
+    opacity: 1;
+}
+
+@media (max-width: 760px) {
+    #nav .push-notify-wrapper {
+        display: none;
+    }
+
+    .push-prefs-modal {
+        width: 95vw;
+        max-height: 90vh;
+    }
+}
