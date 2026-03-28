@@ -44,7 +44,9 @@
 
         registerServiceWorker: function() {
             var swUrl = config.swUrl;
-            var scopeUrl = swUrl.replace(/\/[^/]*$/, '/');
+            // Scope must be /scp/ (not the SW file's parent path)
+            // The SW file sends Service-Worker-Allowed: /scp/ header to permit this
+            var scopeUrl = swUrl.replace(/\/ajax\.php\/.*$/, '/');
 
             return navigator.serviceWorker.register(swUrl, {
                 scope: scopeUrl
