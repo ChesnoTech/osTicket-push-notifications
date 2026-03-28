@@ -296,9 +296,10 @@
                 + '<div class="push-prefs-body">';
 
             // Section 1: Event toggles
+            var eventHint = S('eventTypesHint');
             html += '<div class="push-prefs-section">'
                 + '<h4>' + S('eventTypes') + '</h4>'
-                + '<p class="push-prefs-hint">' + S('eventTypesHint') + '</p>';
+                + (eventHint ? '<p class="push-prefs-hint">' + eventHint + '</p>' : '');
 
             var events = [
                 { key: 'event_new_ticket',  label: S('newTicket') },
@@ -320,9 +321,10 @@
             html += '</div>';
 
             // Section 2: Department filter
+            var deptHint = S('departmentsHint');
             html += '<div class="push-prefs-section">'
                 + '<h4>' + S('departments') + '</h4>'
-                + '<p class="push-prefs-hint">' + S('departmentsHint') + '</p>';
+                + (deptHint ? '<p class="push-prefs-hint">' + deptHint + '</p>' : '');
 
             if (depts.length === 0) {
                 html += '<p class="push-prefs-hint" style="font-style:italic">' + S('noDepartments') + '</p>';
@@ -347,9 +349,10 @@
             html += '</div>';
 
             // Section 3: Quiet hours
+            var quietHint = S('quietHoursHint');
             html += '<div class="push-prefs-section">'
                 + '<h4>' + S('quietHours') + '</h4>'
-                + '<p class="push-prefs-hint">' + S('quietHoursHint') + '</p>'
+                + (quietHint ? '<p class="push-prefs-hint">' + quietHint + '</p>' : '')
                 + '<div class="push-prefs-quiet">'
                 + '<label>' + S('from') + ' <input type="time" name="quiet_start" value="' + (prefs.quiet_start || '') + '"></label>'
                 + '<label>' + S('to') + ' <input type="time" name="quiet_end" value="' + (prefs.quiet_end || '') + '"></label>'
