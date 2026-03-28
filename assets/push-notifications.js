@@ -23,7 +23,9 @@
 
     // i18n helper — falls back to key if string not found
     var S = function(key) {
-        return (config.strings && config.strings[key]) || key;
+        if (config.strings && key in config.strings)
+            return config.strings[key];
+        return key;
     };
 
     var PushUI = {
