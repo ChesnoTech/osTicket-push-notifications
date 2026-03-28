@@ -116,6 +116,43 @@ class PushNotificationsPlugin extends Plugin {
         $csrfToken = $ost ? $ost->getCSRFToken() : '';
         $vapidPublicKey = $config->get('vapid_public_key');
 
+        // Translatable UI strings for the client JS
+        $strings = json_encode(array(
+            'pushNotifications'    => __('Push Notifications'),
+            'enabled'              => __('enabled'),
+            'disabled'             => __('disabled'),
+            'notifPreferences'     => __('Notification Preferences'),
+            'prefTitle'            => __('Notification Preferences'),
+            'prefClose'            => __('Close'),
+            'eventTypes'           => __('Event Types'),
+            'eventTypesHint'       => __('Choose which events trigger push notifications.'),
+            'newTicket'            => __('New Ticket'),
+            'newMessage'           => __('New Message / Reply'),
+            'ticketAssignment'     => __('Ticket Assignment'),
+            'ticketTransfer'       => __('Ticket Transfer'),
+            'overdueTicket'        => __('Overdue Ticket'),
+            'departments'          => __('Departments'),
+            'departmentsHint'      => __('Select departments to receive notifications for. Leave all unchecked to receive from all your departments.'),
+            'noDepartments'        => __('No departments available.'),
+            'quietHours'           => __('Quiet Hours'),
+            'quietHoursHint'       => __('Suppress push notifications during these hours. Leave empty to receive notifications 24/7.'),
+            'from'                 => __('From'),
+            'to'                   => __('To'),
+            'clear'                => __('Clear'),
+            'cancel'               => __('Cancel'),
+            'save'                 => __('Save'),
+            'saving'               => __('Saving...'),
+            'loading'              => __('Loading preferences...'),
+            'loadFailed'           => __('Failed to load preferences.'),
+            'prefsSaved'           => __('Notification preferences saved'),
+            'prefsSaveFailed'      => __('Failed to save preferences'),
+            'pushEnabled'          => __('Push notifications enabled'),
+            'pushDisabled'         => __('Push notifications disabled'),
+            'pushBlocked'          => __('Push notifications blocked by browser. Check site permissions.'),
+            'pushFailed'           => __('Failed to enable push notifications'),
+            'iosHint'              => __('To enable push notifications on iOS, tap the Share button and select "Add to Home Screen", then open the app from there.'),
+        ));
+
         $inlineConfig = sprintf(
             '<script type="text/javascript">'
             . 'window.__PUSH_CONFIG={'
@@ -125,11 +162,13 @@ class PushNotificationsPlugin extends Plugin {
             . 'unsubscribeUrl:"%s/unsubscribe",'
             . 'statusUrl:"%s/status",'
             . 'preferencesUrl:"%s/preferences",'
-            . 'csrfToken:"%s"'
+            . 'csrfToken:"%s",'
+            . 'strings:%s'
             . '};</script>',
             addslashes($vapidPublicKey),
             $base, $base, $base, $base, $base,
-            addslashes($csrfToken));
+            addslashes($csrfToken),
+            $strings);
 
         $js = sprintf(
             '<script type="text/javascript" src="%s/assets/js?v=%s"></script>',

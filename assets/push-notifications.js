@@ -5,7 +5,7 @@
  * the bell toggle UI, and agent preferences modal.
  *
  * @author  ChesnoTech
- * @version 1.1.0
+ * @version 1.2.0
  */
 
 (function($) {
@@ -20,6 +20,11 @@
         console.log('[PushNotifications] Browser does not support push notifications');
         return;
     }
+
+    // i18n helper — falls back to key if string not found
+    var S = function(key) {
+        return (config.strings && config.strings[key]) || key;
+    };
 
     var PushUI = {
         swRegistration: null,
@@ -47,13 +52,14 @@
             });
         },
 
-        // SVG icons
+        // Desktop SVGs — bell filled (enabled) vs bell-with-slash (disabled)
         BELL_SVG: '<svg class="push-bell-svg" style="width:18px;height:18px" viewBox="0 0 24 24">'
             + '<path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>'
             + '</svg>',
 
+        // Material Design "notifications_off" — bell with diagonal slash
         BELL_OFF_SVG: '<svg class="push-bell-svg" style="width:18px;height:18px" viewBox="0 0 24 24">'
-            + '<path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>'
+            + '<path fill="currentColor" d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.43v5l-2 2v1h13.73l2 2L21 19.97l-1-1.28zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0 0 0-.01.01L18 14.68z"/>'
             + '</svg>',
 
         // Mobile SVGs (24x24 with padding to match mobile nav icons)
@@ -62,7 +68,7 @@
             + '</svg>',
 
         MOBILE_BELL_OFF_SVG: '<svg style="width:24px;height:24px;padding:18px;float:right;margin-right:1px;" viewBox="0 0 24 24">'
-            + '<path fill="currentColor" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>'
+            + '<path fill="currentColor" d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.43v5l-2 2v1h13.73l2 2L21 19.97l-1-1.28zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0 0 0-.01.01L18 14.68z"/>'
             + '</svg>',
 
         MOBILE_GEAR_SVG: '<svg style="width:20px;height:20px;padding:20px 8px 20px 0;float:right;" viewBox="0 0 24 24">'
@@ -74,15 +80,17 @@
             + '</svg>',
 
         injectToggle: function() {
+            var titleText = S('pushNotifications');
+
             // Build bell + gear wrapper
             var $wrapper = $('<span id="push-notify-wrapper" class="push-notify-wrapper"></span>');
             var $toggle = $(
-                '<a href="#" id="push-notify-toggle" class="push-notify-toggle no-pjax" title="Push Notifications">'
+                '<a href="#" id="push-notify-toggle" class="push-notify-toggle no-pjax" title="' + titleText + '">'
                 + this.BELL_OFF_SVG
                 + '</a>'
             );
             var $gear = $(
-                '<a href="#" id="push-notify-gear" class="push-notify-gear no-pjax" title="Notification Preferences">'
+                '<a href="#" id="push-notify-gear" class="push-notify-gear no-pjax" title="' + S('notifPreferences') + '">'
                 + this.GEAR_SVG
                 + '</a>'
             );
@@ -105,11 +113,11 @@
             var $rightButtons = $('#right-buttons');
             if ($rightButtons.length && !$rightButtons.find('#push-notify-toggle-mobile').length) {
                 var $mobileBell = $(
-                    '<a href="#" id="push-notify-toggle-mobile" class="mobile-nav push-notify-toggle no-pjax" title="Push Notifications">'
+                    '<a href="#" id="push-notify-toggle-mobile" class="mobile-nav push-notify-toggle no-pjax" title="' + titleText + '">'
                     + PushUI.MOBILE_BELL_OFF_SVG + '</a>'
                 );
                 var $mobileGear = $(
-                    '<a href="#" id="push-notify-gear-mobile" class="mobile-nav push-notify-gear-mobile no-pjax" title="Notification Preferences">'
+                    '<a href="#" id="push-notify-gear-mobile" class="mobile-nav push-notify-gear-mobile no-pjax" title="' + S('notifPreferences') + '">'
                     + PushUI.MOBILE_GEAR_SVG + '</a>'
                 );
                 // Gear first (float:right), then bell — renders as: bell | gear from left
@@ -154,22 +162,23 @@
                 var $mobile = $('#push-notify-toggle-mobile');
                 var $gear = $('#push-notify-gear');
                 var $mobileGear = $('#push-notify-gear-mobile');
+                var titleBase = S('pushNotifications');
                 if (sub) {
                     $toggle.html(PushUI.BELL_SVG)
                            .addClass('push-active')
-                           .attr('title', 'Push Notifications (enabled)');
+                           .attr('title', titleBase + ' (' + S('enabled') + ')');
                     $mobile.html(PushUI.MOBILE_BELL_SVG)
                            .addClass('push-active')
-                           .attr('title', 'Push Notifications (enabled)');
+                           .attr('title', titleBase + ' (' + S('enabled') + ')');
                     $gear.show();
                     $mobileGear.show();
                 } else {
                     $toggle.html(PushUI.BELL_OFF_SVG)
                            .removeClass('push-active')
-                           .attr('title', 'Push Notifications (disabled)');
+                           .attr('title', titleBase + ' (' + S('disabled') + ')');
                     $mobile.html(PushUI.MOBILE_BELL_OFF_SVG)
                            .removeClass('push-active')
-                           .attr('title', 'Push Notifications (disabled)');
+                           .attr('title', titleBase + ' (' + S('disabled') + ')');
                     $gear.hide();
                     $mobileGear.hide();
                 }
@@ -217,13 +226,13 @@
                 });
             }).then(function() {
                 PushUI.updateToggleState();
-                PushUI.showToast('Push notifications enabled');
+                PushUI.showToast(S('pushEnabled'));
             }).catch(function(err) {
                 console.error('[PushNotifications] Subscribe error:', err);
                 if (Notification.permission === 'denied') {
-                    PushUI.showToast('Push notifications blocked by browser. Check site permissions.');
+                    PushUI.showToast(S('pushBlocked'));
                 } else {
-                    PushUI.showToast('Failed to enable push notifications');
+                    PushUI.showToast(S('pushFailed'));
                 }
             });
         },
@@ -240,7 +249,7 @@
                 });
             }).then(function() {
                 PushUI.updateToggleState();
-                PushUI.showToast('Push notifications disabled');
+                PushUI.showToast(S('pushDisabled'));
             }).catch(function(err) {
                 console.error('[PushNotifications] Unsubscribe error:', err);
             });
@@ -251,23 +260,19 @@
         // ============================================================
 
         openPreferencesModal: function() {
-            // Remove existing modal
             $('#push-prefs-overlay').remove();
 
-            // Show loading state
             var $overlay = $('<div id="push-prefs-overlay" class="push-prefs-overlay"></div>');
             var $modal = $('<div class="push-prefs-modal"></div>');
-            $modal.html('<div class="push-prefs-loading">Loading preferences...</div>');
+            $modal.html('<div class="push-prefs-loading">' + S('loading') + '</div>');
             $overlay.append($modal);
             $('body').append($overlay);
 
-            // Close on overlay click
             $overlay.on('click', function(e) {
                 if (e.target === this)
                     PushUI.closePreferencesModal();
             });
 
-            // Fetch preferences
             $.ajax({
                 url: config.preferencesUrl,
                 method: 'GET',
@@ -279,28 +284,28 @@
                 PushUI.renderPreferencesModal($modal, data.preferences, data.departments);
             }).catch(function(err) {
                 console.error('[PushNotifications] Preferences load error:', err);
-                $modal.html('<div class="push-prefs-loading">Failed to load preferences.</div>');
+                $modal.html('<div class="push-prefs-loading">' + S('loadFailed') + '</div>');
             });
         },
 
         renderPreferencesModal: function($modal, prefs, depts) {
             var html = '<div class="push-prefs-header">'
-                + '<h3>Notification Preferences</h3>'
-                + '<a href="#" class="push-prefs-close" title="Close">&times;</a>'
+                + '<h3>' + S('prefTitle') + '</h3>'
+                + '<a href="#" class="push-prefs-close" title="' + S('prefClose') + '">&times;</a>'
                 + '</div>'
                 + '<div class="push-prefs-body">';
 
             // Section 1: Event toggles
             html += '<div class="push-prefs-section">'
-                + '<h4>Event Types</h4>'
-                + '<p class="push-prefs-hint">Choose which events trigger push notifications.</p>';
+                + '<h4>' + S('eventTypes') + '</h4>'
+                + '<p class="push-prefs-hint">' + S('eventTypesHint') + '</p>';
 
             var events = [
-                { key: 'event_new_ticket',  label: 'New Ticket' },
-                { key: 'event_new_message', label: 'New Message / Reply' },
-                { key: 'event_assignment',  label: 'Ticket Assignment' },
-                { key: 'event_transfer',    label: 'Ticket Transfer' },
-                { key: 'event_overdue',     label: 'Overdue Ticket' }
+                { key: 'event_new_ticket',  label: S('newTicket') },
+                { key: 'event_new_message', label: S('newMessage') },
+                { key: 'event_assignment',  label: S('ticketAssignment') },
+                { key: 'event_transfer',    label: S('ticketTransfer') },
+                { key: 'event_overdue',     label: S('overdueTicket') }
             ];
 
             for (var i = 0; i < events.length; i++) {
@@ -316,11 +321,11 @@
 
             // Section 2: Department filter
             html += '<div class="push-prefs-section">'
-                + '<h4>Departments</h4>'
-                + '<p class="push-prefs-hint">Select departments to receive notifications for. Leave all unchecked to receive from all your departments.</p>';
+                + '<h4>' + S('departments') + '</h4>'
+                + '<p class="push-prefs-hint">' + S('departmentsHint') + '</p>';
 
             if (depts.length === 0) {
-                html += '<p class="push-prefs-hint" style="font-style:italic">No departments available.</p>';
+                html += '<p class="push-prefs-hint" style="font-style:italic">' + S('noDepartments') + '</p>';
             } else {
                 var selectedDepts = prefs.dept_ids || [];
                 for (var d = 0; d < depts.length; d++) {
@@ -343,12 +348,12 @@
 
             // Section 3: Quiet hours
             html += '<div class="push-prefs-section">'
-                + '<h4>Quiet Hours</h4>'
-                + '<p class="push-prefs-hint">Suppress push notifications during these hours. Leave empty to receive notifications 24/7.</p>'
+                + '<h4>' + S('quietHours') + '</h4>'
+                + '<p class="push-prefs-hint">' + S('quietHoursHint') + '</p>'
                 + '<div class="push-prefs-quiet">'
-                + '<label>From <input type="time" name="quiet_start" value="' + (prefs.quiet_start || '') + '"></label>'
-                + '<label>To <input type="time" name="quiet_end" value="' + (prefs.quiet_end || '') + '"></label>'
-                + '<a href="#" class="push-prefs-quiet-clear">Clear</a>'
+                + '<label>' + S('from') + ' <input type="time" name="quiet_start" value="' + (prefs.quiet_start || '') + '"></label>'
+                + '<label>' + S('to') + ' <input type="time" name="quiet_end" value="' + (prefs.quiet_end || '') + '"></label>'
+                + '<a href="#" class="push-prefs-quiet-clear">' + S('clear') + '</a>'
                 + '</div>'
                 + '</div>';
 
@@ -356,8 +361,8 @@
 
             // Footer
             html += '<div class="push-prefs-footer">'
-                + '<button type="button" class="push-prefs-btn push-prefs-btn-cancel">Cancel</button>'
-                + '<button type="button" class="push-prefs-btn push-prefs-btn-save">Save</button>'
+                + '<button type="button" class="push-prefs-btn push-prefs-btn-cancel">' + S('cancel') + '</button>'
+                + '<button type="button" class="push-prefs-btn push-prefs-btn-save">' + S('save') + '</button>'
                 + '</div>';
 
             $modal.html(html);
@@ -383,26 +388,23 @@
         savePreferences: function($modal) {
             var data = {};
 
-            // Event toggles
             var eventKeys = ['event_new_ticket', 'event_new_message', 'event_assignment',
                              'event_transfer', 'event_overdue'];
             for (var i = 0; i < eventKeys.length; i++) {
                 data[eventKeys[i]] = $modal.find('input[name="' + eventKeys[i] + '"]').is(':checked') ? 1 : 0;
             }
 
-            // Department IDs
             var deptIds = [];
             $modal.find('input[name="dept_id"]:checked').each(function() {
                 deptIds.push(parseInt($(this).val(), 10));
             });
             data.dept_ids = deptIds;
 
-            // Quiet hours
             data.quiet_start = $modal.find('input[name="quiet_start"]').val() || '';
             data.quiet_end = $modal.find('input[name="quiet_end"]').val() || '';
 
             var $saveBtn = $modal.find('.push-prefs-btn-save');
-            $saveBtn.prop('disabled', true).text('Saving...');
+            $saveBtn.prop('disabled', true).text(S('saving'));
 
             $.ajax({
                 url: config.preferencesUrl,
@@ -413,11 +415,11 @@
             }).then(function() {
                 PushUI.prefsCache = data;
                 PushUI.closePreferencesModal();
-                PushUI.showToast('Notification preferences saved');
+                PushUI.showToast(S('prefsSaved'));
             }).catch(function(err) {
                 console.error('[PushNotifications] Save preferences error:', err);
-                $saveBtn.prop('disabled', false).text('Save');
-                PushUI.showToast('Failed to save preferences');
+                $saveBtn.prop('disabled', false).text(S('save'));
+                PushUI.showToast(S('prefsSaveFailed'));
             });
         },
 
@@ -442,14 +444,9 @@
 
             if (!isStandalone) {
                 var $toggle = $('#push-notify-toggle');
-                $toggle.attr('title',
-                    'Add this site to your Home Screen to enable push notifications on iOS');
                 $toggle.on('click.ios-hint', function(e) {
                     e.preventDefault();
-                    PushUI.showToast(
-                        'To enable push notifications on iOS, tap the Share button '
-                        + 'and select "Add to Home Screen", then open the app from there.'
-                    );
+                    PushUI.showToast(S('iosHint'));
                 });
             }
         },
