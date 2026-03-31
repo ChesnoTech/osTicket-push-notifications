@@ -426,11 +426,16 @@ class PushDispatcher {
             return;
 
         // Build the notification JSON payload
+        $config = self::getPluginConfig();
+        $iconUrl = ($config && $config->get('notification_icon'))
+            ? $config->get('notification_icon')
+            : '/scp/images/ost-logo.png';
+
         $jsonPayload = json_encode(array(
             'title' => $payload['title'],
             'body'  => $payload['body'],
-            'icon'  => '/scp/images/ost-logo.png',
-            'badge' => '/scp/images/ost-logo.png',
+            'icon'  => $iconUrl,
+            'badge' => $iconUrl,
             'tag'   => $payload['event'] . '-' . $payload['ticket_id'],
             'data'  => array(
                 'url'          => '/scp/tickets.php?id=' . $payload['ticket_id'],
@@ -581,11 +586,16 @@ class PushDispatcher {
         if (!$webpush)
             return array('success' => false, 'error' => 'VAPID keys not configured');
 
+        $config = self::getPluginConfig();
+        $iconUrl = ($config && $config->get('notification_icon'))
+            ? $config->get('notification_icon')
+            : '/scp/images/ost-logo.png';
+
         $payload = json_encode(array(
             'title' => 'osTicket Push Test',
             'body'  => 'Push notifications are working!',
-            'icon'  => '/scp/images/ost-logo.png',
-            'badge' => '/scp/images/ost-logo.png',
+            'icon'  => $iconUrl,
+            'badge' => $iconUrl,
             'tag'   => 'test-' . time(),
             'data'  => array(
                 'url' => '/scp/',

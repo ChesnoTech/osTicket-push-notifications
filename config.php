@@ -82,6 +82,13 @@ class PushNotificationsConfig extends PluginConfig {
                     'desc' => __('Send push notification when a ticket becomes overdue'),
                 ),
             )),
+            'notification_icon' => new TextboxField(array(
+                'label' => __('Notification Icon URL'),
+                'required' => false,
+                'default' => '',
+                'hint' => __('URL for the notification icon/logo (e.g. /logo.png or https://example.com/logo.png). Leave empty for osTicket default logo.'),
+                'configuration' => array('size' => 80, 'length' => 500),
+            )),
             // last_cron_check is stored directly via $config->set() — not shown in UI
         );
     }
