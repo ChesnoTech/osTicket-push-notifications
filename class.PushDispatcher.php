@@ -2,19 +2,22 @@
 /**
  * Push Notifications Plugin - Notification Dispatcher
  *
- * Mirrors the email alert recipient logic from class.ticket.php and sends
- * Web Push notifications to the same recipients, respecting admin config
- * toggles and staff alert preferences.
+ * Independent push notification system — does NOT depend on osTicket's
+ * global email alert settings. Push is controlled entirely by the plugin's
+ * own admin toggles and per-agent preferences.
+ *
+ * Recipient selection still uses osTicket's department/team membership
+ * to determine who COULD receive a push for each event.
  *
  * @author  ChesnoTech
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 class PushDispatcher {
 
     /**
      * Signal handler: ticket.created
-     * Mirrors onNewTicket() alert logic from class.ticket.php:1641
+     * Sends push to dept members + manager when a new ticket arrives.
      */
     static function onTicketCreated($ticket) {
         if (!$ticket || !($ticket instanceof Ticket))
@@ -24,19 +27,15 @@ class PushDispatcher {
         if (!$config || !$config->get('push_enabled') || !$config->get('alert_new_ticket'))
             return;
 
-        global $cfg;
-        if (!$cfg || !$cfg->alertONNewTicket())
-            return;
-
         $dept = $ticket->getDept();
-        if (!$dept || !$dept->getNumMembersForAlerts())
+        if (!$dept)
             return;
 
         $recipients = array();
 
         // Department members (only if ticket is NOT assigned)
         $manager = $dept->getManager();
-        if ($cfg->alertDeptMembersONNewTicket() && !$ticket->isAssigned()) {
+        if (!$ticket->isAssigned()) {
             if ($members = $dept->getMembersForAlerts()) {
                 foreach ($members as $M) {
                     if ($M != $manager)
@@ -46,12 +45,11 @@ class PushDispatcher {
         }
 
         // Department manager
-        if ($cfg->alertDeptManagerONNewTicket() && $manager)
+        if ($manager)
             $recipients[] = $manager;
 
         // Account manager
-        if ($cfg->alertAcctManagerONNewTicket()
-            && ($owner = $ticket->getOwner())
+        if (($owner = $ticket->getOwner())
             && ($org = $owner->getOrganization())
             && ($acctManager = $org->getAccountManager())
         ) {
@@ -61,7 +59,7 @@ class PushDispatcher {
                 $recipients[] = $acctManager;
         }
 
-        $deptId = $dept ? $dept->getId() : 0;
+        $deptId = $dept->getId();
         self::dispatchToRecipients($recipients, array(
             'event'         => 'new_ticket',
             'title'         => sprintf('New Ticket #%s', $ticket->getNumber()),
@@ -73,8 +71,7 @@ class PushDispatcher {
 
     /**
      * Signal handler: object.created
-     * Mirrors postMessage() alert logic from class.ticket.php:3210
-     * Fires for type='message' (new customer reply)
+     * Sends push when a new customer message/reply is posted.
      */
     static function onObjectCreated($ticket, &$data) {
         if (!$ticket || !($ticket instanceof Ticket))
@@ -86,10 +83,6 @@ class PushDispatcher {
         if (!$config || !$config->get('push_enabled') || !$config->get('alert_new_message'))
             return;
 
-        global $cfg;
-        if (!$cfg || !$cfg->alertONNewMessage())
-            return;
-
         $dept = $ticket->getDept();
         if (!$dept)
             return;
@@ -97,11 +90,11 @@ class PushDispatcher {
         $recipients = array();
 
         // Last respondent
-        if ($cfg->alertLastRespondentONNewMessage() && ($lr = $ticket->getLastRespondent()))
+        if ($lr = $ticket->getLastRespondent())
             $recipients[] = $lr;
 
         // Assigned staff or team
-        if ($cfg->alertAssignedONNewMessage() && $ticket->isAssigned()) {
+        if ($ticket->isAssigned()) {
             if ($staff = $ticket->getStaff())
                 $recipients[] = $staff;
             elseif ($team = $ticket->getTeam())
@@ -109,16 +102,11 @@ class PushDispatcher {
         }
 
         // Department manager
-        if ($cfg->alertDeptManagerONNewMessage()
-            && $dept
-            && ($manager = $dept->getManager())
-        ) {
+        if ($manager = $dept->getManager())
             $recipients[] = $manager;
-        }
 
         // Account manager
-        if ($cfg->alertAcctManagerONNewMessage()
-            && ($owner = $ticket->getOwner())
+        if (($owner = $ticket->getOwner())
             && ($org = $owner->getOrganization())
             && ($acctManager = $org->getAccountManager())
         ) {
@@ -133,7 +121,7 @@ class PushDispatcher {
         if (isset($data['uid']) && $data['uid'])
             $excludeStaffId = $data['uid'];
 
-        $deptId = $dept ? $dept->getId() : 0;
+        $deptId = $dept->getId();
         self::dispatchToRecipients($recipients, array(
             'event'         => 'new_message',
             'title'         => sprintf('New Reply on #%s', $ticket->getNumber()),
@@ -145,7 +133,7 @@ class PushDispatcher {
 
     /**
      * Signal handler: object.edited
-     * Handles assignment events (type='assigned') from class.ticket.php:2812,2902
+     * Sends push when a ticket is assigned to staff or team.
      */
     static function onObjectEdited($ticket, &$data) {
         if (!$ticket || !($ticket instanceof Ticket))
@@ -157,19 +145,15 @@ class PushDispatcher {
         if (!$config || !$config->get('push_enabled') || !$config->get('alert_assignment'))
             return;
 
-        global $cfg;
-        if (!$cfg || !$cfg->alertONAssignment())
-            return;
-
         $dept = $ticket->getDept();
-        if (!$dept || !$dept->getNumMembersForAlerts())
+        if (!$dept)
             return;
 
         $recipients = array();
 
         // Assigned to staff
         if (isset($data['staff']) || isset($data['claim'])) {
-            if ($cfg->alertStaffONAssignment() && ($staff = $ticket->getStaff()))
+            if ($staff = $ticket->getStaff())
                 $recipients[] = $staff;
         }
 
@@ -177,15 +161,10 @@ class PushDispatcher {
         if (isset($data['team'])) {
             $team = $ticket->getTeam();
             if ($team && $team->alertsEnabled()) {
-                if ($cfg->alertTeamMembersONAssignment()
-                    && ($members = $team->getMembersForAlerts())
-                ) {
+                if ($members = $team->getMembersForAlerts())
                     $recipients = array_merge($recipients, $members);
-                } elseif ($cfg->alertTeamLeadONAssignment()
-                    && ($lead = $team->getTeamLead())
-                ) {
+                elseif ($lead = $team->getTeamLead())
                     $recipients[] = $lead;
-                }
             }
         }
 
@@ -193,7 +172,7 @@ class PushDispatcher {
         global $thisstaff;
         $excludeStaffId = $thisstaff ? $thisstaff->getId() : 0;
 
-        $deptId = $dept ? $dept->getId() : 0;
+        $deptId = $dept->getId();
         self::dispatchToRecipients($recipients, array(
             'event'         => 'assignment',
             'title'         => sprintf('Ticket #%s Assigned to You', $ticket->getNumber()),
@@ -205,8 +184,7 @@ class PushDispatcher {
 
     /**
      * Signal handler: model.updated
-     * Detects ticket transfers by checking if dept_id changed.
-     * Fired from class.ticket.php via save() → class.orm.php:684
+     * Sends push when a ticket is transferred to a new department.
      */
     static function onModelUpdated($model, $data = null) {
         if (!$model || !($model instanceof Ticket))
@@ -220,18 +198,14 @@ class PushDispatcher {
         if (!$config || !$config->get('push_enabled') || !$config->get('alert_transfer'))
             return;
 
-        global $cfg;
-        if (!$cfg || !$cfg->alertONTransfer())
-            return;
-
         $dept = $model->getDept(); // New (target) department
-        if (!$dept || !$dept->getNumMembersForAlerts())
+        if (!$dept)
             return;
 
         $recipients = array();
 
         // Assigned staff or team in the new department
-        if ($model->isAssigned() && $cfg->alertAssignedONTransfer()) {
+        if ($model->isAssigned()) {
             if ($model->getStaffId())
                 $recipients[] = $model->getStaff();
             elseif ($model->getTeamId()
@@ -240,24 +214,21 @@ class PushDispatcher {
             ) {
                 $recipients = array_merge($recipients, $members);
             }
-        } elseif ($cfg->alertDeptMembersONTransfer() && !$model->isAssigned()) {
+        } else {
+            // Unassigned: notify dept members
             foreach ($dept->getMembersForAlerts() as $M)
                 $recipients[] = $M;
         }
 
         // Department manager of the new department
-        if ($cfg->alertDeptManagerONTransfer()
-            && $dept
-            && ($manager = $dept->getManager())
-        ) {
+        if ($manager = $dept->getManager())
             $recipients[] = $manager;
-        }
 
         // Exclude the staff who initiated the transfer
         global $thisstaff;
         $excludeStaffId = $thisstaff ? $thisstaff->getId() : 0;
 
-        $deptId = $dept ? $dept->getId() : 0;
+        $deptId = $dept->getId();
         self::dispatchToRecipients($recipients, array(
             'event'         => 'transfer',
             'title'         => sprintf('Ticket #%s Transferred', $model->getNumber()),
@@ -274,10 +245,6 @@ class PushDispatcher {
     static function onCron($null = null, &$data = null) {
         $config = self::getPluginConfig();
         if (!$config || !$config->get('push_enabled') || !$config->get('alert_overdue'))
-            return;
-
-        global $cfg;
-        if (!$cfg || !$cfg->alertONOverdueTicket())
             return;
 
         $lastCheck = $config->get('last_cron_check');
@@ -315,19 +282,16 @@ class PushDispatcher {
 
     /**
      * Process overdue alert for a single ticket.
-     * Mirrors onOverdue() from class.ticket.php:2112
      */
     private static function processOverdue($ticket) {
-        global $cfg;
-
         $dept = $ticket->getDept();
-        if (!$dept || !$dept->getNumMembersForAlerts())
+        if (!$dept)
             return;
 
         $recipients = array();
 
         // Assigned staff or team
-        if ($ticket->isAssigned() && $cfg->alertAssignedONOverdueTicket()) {
+        if ($ticket->isAssigned()) {
             if ($ticket->getStaffId())
                 $recipients[] = $ticket->getStaff();
             elseif ($ticket->getTeamId()
@@ -336,20 +300,17 @@ class PushDispatcher {
             ) {
                 $recipients = array_merge($recipients, $members);
             }
-        } elseif ($cfg->alertDeptMembersONOverdueTicket() && !$ticket->isAssigned()) {
+        } else {
+            // Unassigned: notify dept members
             foreach ($dept->getMembersForAlerts() as $M)
                 $recipients[] = $M;
         }
 
         // Department manager
-        if ($cfg->alertDeptManagerONOverdueTicket()
-            && $dept
-            && ($manager = $dept->getManager())
-        ) {
+        if ($manager = $dept->getManager())
             $recipients[] = $manager;
-        }
 
-        $deptId = $dept ? $dept->getId() : 0;
+        $deptId = $dept->getId();
         self::dispatchToRecipients($recipients, array(
             'event'         => 'overdue',
             'title'         => sprintf('Ticket #%s is Overdue', $ticket->getNumber()),
