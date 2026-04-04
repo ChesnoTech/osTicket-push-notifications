@@ -453,22 +453,22 @@ class PushUpdater {
             $this->copyDirectory($filesDir, $this->pluginDir, array('backups'));
         }
 
-        // Restore database tables
+        // Restore database tables inside a transaction
         $prefix = TABLE_PREFIX;
         $sqlFiles = glob($backupPath . '*.sql');
         if ($sqlFiles) {
+            db_query('BEGIN');
             foreach ($sqlFiles as $sqlFile) {
                 $tableName = $prefix . basename($sqlFile, '.sql');
-                // Drop and recreate from backup
                 db_query("DROP TABLE IF EXISTS `{$tableName}`");
                 $sql = file_get_contents($sqlFile);
-                // Execute each statement
                 $statements = array_filter(array_map('trim', explode(";\n", $sql)));
                 foreach ($statements as $stmt) {
                     if ($stmt && strpos($stmt, '--') !== 0)
                         db_query($stmt);
                 }
             }
+            db_query('COMMIT');
         }
 
         return array(

@@ -161,22 +161,17 @@ class PushNotificationsPlugin extends Plugin {
             'iosHint'              => __('Settings'),
         ));
 
-        $inlineConfig = sprintf(
-            '<script type="text/javascript">'
+        $inlineConfig = '<script type="text/javascript">'
             . 'window.__PUSH_CONFIG={'
-            . 'vapidPublicKey:"%s",'
-            . 'swUrl:"%s/sw.js",'
-            . 'subscribeUrl:"%s/subscribe",'
-            . 'unsubscribeUrl:"%s/unsubscribe",'
-            . 'statusUrl:"%s/status",'
-            . 'preferencesUrl:"%s/preferences",'
-            . 'csrfToken:"%s",'
-            . 'strings:%s'
-            . '};</script>',
-            addslashes($vapidPublicKey),
-            $base, $base, $base, $base, $base,
-            addslashes($csrfToken),
-            $strings);
+            . 'vapidPublicKey:' . json_encode($vapidPublicKey) . ','
+            . 'swUrl:' . json_encode($base . '/sw.js') . ','
+            . 'subscribeUrl:' . json_encode($base . '/subscribe') . ','
+            . 'unsubscribeUrl:' . json_encode($base . '/unsubscribe') . ','
+            . 'statusUrl:' . json_encode($base . '/status') . ','
+            . 'preferencesUrl:' . json_encode($base . '/preferences') . ','
+            . 'csrfToken:' . json_encode($csrfToken) . ','
+            . 'strings:' . $strings
+            . '};</script>';
 
         $js = sprintf(
             '<script type="text/javascript" src="%s/assets/js?v=%s"></script>',

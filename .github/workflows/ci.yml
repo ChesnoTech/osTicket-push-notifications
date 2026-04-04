@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  php-lint:
+    name: PHP Syntax Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2', '8.3']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: openssl, curl, json, mbstring
+          tools: none
+
+      - name: PHP Lint — all PHP files
+        run: |
+          errors=0
+          while IFS= read -r file; do
+            if ! php -l "$file" > /dev/null 2>&1; then
+              php -l "$file"
+              errors=$((errors + 1))
+            fi
+          done < <(find . -name '*.php' -not -path './backups/*' -not -path './vendor/*')
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::$errors file(s) with syntax errors"
+            exit 1
+          fi
+          echo "All PHP files passed syntax check."
+
+  validate-plugin:
+    name: Validate Plugin Manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: openssl, curl, json
+          tools: none
+
+      - name: Check plugin.php returns valid array
+        run: |
+          php -r '
+            $manifest = include "plugin.php";
+            if (!is_array($manifest)) {
+              echo "::error::plugin.php must return an array\n";
+              exit(1);
+            }
+            $required = ["id", "version", "name", "author", "plugin"];
+            foreach ($required as $key) {
+              if (empty($manifest[$key])) {
+                echo "::error::plugin.php missing required key: $key\n";
+                exit(1);
+              }
+            }
+            echo "Plugin manifest OK: " . $manifest["name"] . " v" . $manifest["version"] . "\n";
+          '
+
+      - name: Validate version format (semver)
+        run: |
+          php -r '
+            $manifest = include "plugin.php";
+            $v = $manifest["version"];
+            if (!preg_match("/^\d+\.\d+\.\d+(-[a-z]+\.\d+)?$/", $v)) {
+              echo "::error::Version \"$v\" is not valid semver\n";
+              exit(1);
+            }
+            echo "Version OK: $v\n";
+          '
+
+  security-check:
+    name: Security Patterns
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for dangerous functions
+        run: |
+          errors=0
+          # Check for eval() usage (excluding comments)
+          if grep -rn --include='*.php' -P '(?<!//\s)\beval\s*\(' . --exclude-dir=backups; then
+            echo "::warning::Found eval() usage — review for safety"
+            errors=$((errors + 1))
+          fi
+          # Check for exec/system/passthru (excluding comments)
+          if grep -rn --include='*.php' -P '(?<!//\s)\b(exec|system|passthru|shell_exec|proc_open)\s*\(' . --exclude-dir=backups; then
+            echo "::warning::Found shell execution function — review for safety"
+            errors=$((errors + 1))
+          fi
+          # Check for addslashes in JS context (should use json_encode)
+          if grep -rn --include='*.php' 'addslashes.*script\|script.*addslashes' . --exclude-dir=backups; then
+            echo "::error::Found addslashes() in script context — use json_encode() instead"
+            exit 1
+          fi
+          if [ "$errors" -gt 0 ]; then
+            echo "::warning::$errors potential security pattern(s) found — please review"
+          else
+            echo "No dangerous patterns found."
+          fi
+
+      - name: Check for unvalidated user input in SQL
+        run: |
+          # Look for direct $_GET/$_POST/$_REQUEST in db_query without db_input
+          if grep -rn --include='*.php' -P 'db_query.*\$_(GET|POST|REQUEST)\[' . --exclude-dir=backups; then
+            echo "::error::Found direct user input in db_query — use db_input()"
+            exit 1
+          fi
+          echo "No unvalidated SQL input found."

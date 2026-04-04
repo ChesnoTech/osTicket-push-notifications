@@ -364,7 +364,8 @@ class PushNotificationsAjax extends AjaxController {
         $updater = new PushUpdater();
 
         // Allow ?channel=beta override for one-off checks
-        $channel = isset($_GET['channel']) ? $_GET['channel'] : null;
+        $channel = (isset($_GET['channel']) && in_array($_GET['channel'], PushUpdater::CHANNELS, true))
+            ? $_GET['channel'] : null;
         $result = $updater->checkForUpdate($channel);
         $result['channels'] = PushUpdater::CHANNELS;
         $result['current_channel'] = $updater->getChannel();
