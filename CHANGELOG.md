@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-04
+
+### Fixed
+- Replace `addslashes()` with `json_encode()` for inline JS config (XSS safety)
+- Validate `$_GET['channel']` with `in_array()` against allowed update channels
+- Wrap database rollback operations in `BEGIN`/`COMMIT` transaction for atomicity
+
+### Added
+- GitHub Actions CI workflow: PHP lint (8.1–8.3), plugin manifest validation, security pattern checks
+
 ## [1.1.0] - 2026-04-04
 
 ### Added
@@ -33,5 +43,6 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Subscription cleanup on cron
 - Multilingual README (8 languages)
 
+[1.1.1]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.0.0
