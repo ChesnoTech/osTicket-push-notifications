@@ -72,7 +72,13 @@ class PushNotificationsPlugin extends Plugin {
                 url_post('^preferences$', 'savePreferences'),
                 url_get('^assets/js$', 'serveJs'),
                 url_get('^assets/css$', 'serveCss'),
-                url_get('^test$', 'sendTest')
+                url_get('^test$', 'sendTest'),
+                url_get('^update/check$', 'checkUpdate'),
+                url_post('^update/apply$', 'applyUpdate'),
+                url_post('^update/rollback$', 'rollbackUpdate'),
+                url_post('^update/channel$', 'setChannel'),
+                url_get('^update/backups$', 'listBackups'),
+                url_get('^update-manager$', 'serveUpdateManager')
             ))
         );
     }
@@ -179,7 +185,101 @@ class PushNotificationsPlugin extends Plugin {
         $buffer = str_replace('</head>', $css . "\n</head>", $buffer);
         $buffer = str_replace('</body>', $inlineConfig . "\n" . $js . "\n</body>", $buffer);
 
+        // Inject admin update banner if an update is available
+        global $thisstaff;
+        if ($thisstaff && $thisstaff->isAdmin()) {
+            $updateJson = $config->get('update_available');
+            if ($updateJson) {
+                $update = json_decode($updateJson, true);
+                if (is_array($update) && !empty($update['version'])) {
+                    $updateBanner = self::buildUpdateBanner($update, $base);
+                    $buffer = str_replace('</body>', $updateBanner . "\n</body>", $buffer);
+                }
+            }
+        }
+
         return $buffer;
+    }
+
+    /**
+     * Build the admin update notification banner HTML + JS.
+     */
+    static function buildUpdateBanner($update, $baseUrl) {
+        $version = htmlspecialchars($update['version']);
+        $releaseUrl = htmlspecialchars($update['url'] ?? '');
+        $channel = htmlspecialchars($update['channel'] ?? 'stable');
+        $channelLabel = $channel !== 'stable'
+            ? ' <span style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:3px;font-size:10px;text-transform:uppercase;">' . $channel . '</span>'
+            : '';
+
+        return <<<HTML
+<div id="push-update-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;
+    background:#1a73e8;color:#fff;padding:14px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.3);
+    font-size:13px;max-width:380px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+            <strong>Push Notifications v{$version}</strong>{$channelLabel} is available!
+            <div style="margin-top:4px;opacity:.85;font-size:12px;">
+                <a href="{$releaseUrl}" target="_blank" style="color:#fff;text-decoration:underline;">Release notes</a>
+            </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+            <button onclick="pushApplyUpdate()" id="push-update-btn"
+                style="background:#fff;color:#1a73e8;border:none;padding:6px 14px;border-radius:4px;
+                cursor:pointer;font-size:12px;font-weight:600;">Update</button>
+            <button onclick="document.getElementById('push-update-banner').style.display='none'"
+                style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);
+                padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Dismiss</button>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+(function(){
+    var banner = document.getElementById('push-update-banner');
+    if (banner) banner.style.display = 'block';
+    window.pushApplyUpdate = function() {
+        var btn = document.getElementById('push-update-btn');
+        if (!btn) return;
+        btn.textContent = 'Updating...';
+        btn.disabled = true;
+        var csrf = (window.__PUSH_CONFIG && window.__PUSH_CONFIG.csrfToken) || '';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '{$baseUrl}/update/apply', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('X-CSRFToken', csrf);
+        xhr.onload = function() {
+            try {
+                var r = JSON.parse(xhr.responseText);
+                if (r.success) {
+                    btn.textContent = 'Done!';
+                    btn.style.background = '#34a853';
+                    btn.style.color = '#fff';
+                    banner.querySelector('strong').textContent =
+                        'Updated to v' + r.new_version;
+                    setTimeout(function(){ location.reload(); }, 2000);
+                } else {
+                    btn.textContent = 'Failed';
+                    btn.style.background = '#ea4335';
+                    btn.style.color = '#fff';
+                    alert('Update failed: ' + (r.error || 'Unknown error'));
+                    setTimeout(function(){ btn.textContent='Retry'; btn.disabled=false;
+                        btn.style.background='#fff'; btn.style.color='#1a73e8'; }, 3000);
+                }
+            } catch(e) {
+                btn.textContent = 'Error';
+                alert('Update error: ' + xhr.responseText);
+            }
+        };
+        xhr.onerror = function() {
+            btn.textContent = 'Error';
+            btn.disabled = false;
+            alert('Network error during update');
+        };
+        xhr.send('{}');
+    };
+})();
+</script>
+HTML;
     }
 
     /**

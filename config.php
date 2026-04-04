@@ -89,7 +89,29 @@ class PushNotificationsConfig extends PluginConfig {
                 'hint' => __('URL for the notification icon/logo (e.g. /logo.png or https://example.com/logo.png). Leave empty for osTicket default logo.'),
                 'configuration' => array('size' => 80, 'length' => 500),
             )),
-            // last_cron_check is stored directly via $config->set() — not shown in UI
+            'update_section' => new SectionBreakField(array(
+                'label' => __('Auto-Update'),
+                'hint' => sprintf(
+                    '<a href="%sscp/ajax.php/push-notifications/update-manager" target="_blank" '
+                    . 'style="color:#1a73e8;font-weight:600;text-decoration:none;">'
+                    . '&#128640; Open Update Manager</a> &mdash; '
+                    . 'Check for updates, install new versions, manage backups &amp; rollbacks.',
+                    ROOT_PATH
+                ),
+            )),
+            'update_channel' => new ChoiceField(array(
+                'label' => __('Update Channel'),
+                'default' => 'stable',
+                'choices' => array(
+                    'stable' => __('Stable') . ' — ' . __('Production-ready releases only'),
+                    'rc'     => __('Release Candidate') . ' — ' . __('Final testing before stable'),
+                    'beta'   => __('Beta') . ' — ' . __('New features, may have bugs'),
+                    'dev'    => __('Dev') . ' — ' . __('Latest development builds'),
+                ),
+                'hint' => __('Which release channel to check for updates. Stable is recommended for production.'),
+            )),
+            // Auto-update: these are stored directly via $config->set() — not shown in UI:
+            // last_cron_check, db_schema_version, last_update_check, update_available
         );
     }
 

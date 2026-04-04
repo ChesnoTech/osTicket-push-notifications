@@ -278,6 +278,42 @@ class PushDispatcher {
         // Periodic subscription cleanup (~10% of cron runs)
         if (mt_rand(1, 10) === 5)
             self::cleanupSubscriptions();
+
+        // Periodic update check (every 12 hours)
+        self::cronUpdateCheck($config);
+    }
+
+    /**
+     * Check for plugin updates on a schedule (every 12 hours via cron).
+     * Stores result in config for admin banner display.
+     */
+    private static function cronUpdateCheck($config) {
+        if (!$config)
+            return;
+
+        $lastUpdateCheck = (int) $config->get('last_update_check');
+        $now = time();
+
+        // Only check every 12 hours
+        if ($lastUpdateCheck && ($now - $lastUpdateCheck) < 43200)
+            return;
+
+        $config->set('last_update_check', $now);
+
+        require_once dirname(__FILE__) . '/class.PushUpdater.php';
+        $updater = new PushUpdater();
+        $result = $updater->checkForUpdate();
+
+        if ($result && $result['available']) {
+            $config->set('update_available', json_encode(array(
+                'version'  => $result['latest_version'],
+                'channel'  => $result['channel'] ?? 'stable',
+                'url'      => $result['html_url'] ?? '',
+                'checked'  => date('Y-m-d H:i:s'),
+            )));
+        } else {
+            $config->set('update_available', '');
+        }
     }
 
     /**
