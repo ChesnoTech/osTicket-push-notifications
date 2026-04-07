@@ -1,7 +1,7 @@
 <?php
 return array(
     'id'          => 'osticket:push-notifications',
-    'version'     => '1.1.1',
+    'version'     => '1.2.0',
     'name'        => 'Push Notifications',
     'author'      => 'ChesnoTech',
     'description' => 'Web Push (PWA) notifications for staff. Mirrors email alerts for ticket events including new tickets, messages, assignments, transfers, and overdue tickets.',
