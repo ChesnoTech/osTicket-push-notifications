@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-07
+
+### Changed
+- Move update management from floating banner to "Updates" tab on plugin config page
+- Remove update notification from non-related pages — now only visible in plugin settings
+- Remove `update_section` and `update_channel` from config form (managed in Updates tab)
+
+### Added
+- Tabbed config UI: "Settings" tab for plugin config, "Updates" tab for update management
+- Update badge on tab when new version is available
+- Dark mode support for Updates tab UI
+- URL hash `#updates` to deep-link directly to the Updates tab
+
 ## [1.1.1] - 2026-04-04
 
 ### Fixed
@@ -43,6 +56,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Subscription cleanup on cron
 - Multilingual README (8 languages)
 
+[1.2.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.2.0
 [1.1.1]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.0.0

@@ -180,101 +180,199 @@ class PushNotificationsPlugin extends Plugin {
         $buffer = str_replace('</head>', $css . "\n</head>", $buffer);
         $buffer = str_replace('</body>', $inlineConfig . "\n" . $js . "\n</body>", $buffer);
 
-        // Inject admin update banner if an update is available
+        // Inject Updates tab on our plugin config page (admin only)
         global $thisstaff;
-        if ($thisstaff && $thisstaff->isAdmin()) {
-            $updateJson = $config->get('update_available');
-            if ($updateJson) {
-                $update = json_decode($updateJson, true);
-                if (is_array($update) && !empty($update['version'])) {
-                    $updateBanner = self::buildUpdateBanner($update, $base);
-                    $buffer = str_replace('</body>', $updateBanner . "\n</body>", $buffer);
-                }
-            }
+        if ($thisstaff && $thisstaff->isAdmin()
+            && strpos($buffer, 'VAPID Subject') !== false) {
+            $tabCode = self::buildConfigTabs($config, $base, $csrfToken);
+            $buffer = str_replace('</body>', $tabCode . "\n</body>", $buffer);
         }
 
         return $buffer;
     }
 
     /**
-     * Build the admin update notification banner HTML + JS.
+     * Build tabbed config UI with Settings + Updates tabs.
+     * Injected into the plugin config page only.
      */
-    static function buildUpdateBanner($update, $baseUrl) {
-        $version = htmlspecialchars($update['version']);
-        $releaseUrl = htmlspecialchars($update['url'] ?? '');
-        $channel = htmlspecialchars($update['channel'] ?? 'stable');
-        $channelLabel = $channel !== 'stable'
-            ? ' <span style="background:rgba(255,255,255,.2);padding:1px 6px;border-radius:3px;font-size:10px;text-transform:uppercase;">' . $channel . '</span>'
-            : '';
-
-        return <<<HTML
-<div id="push-update-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;
-    background:#1a73e8;color:#fff;padding:14px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.3);
-    font-size:13px;max-width:380px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
-    <div style="display:flex;align-items:center;gap:10px;">
-        <div style="flex:1;">
-            <strong>Push Notifications v{$version}</strong>{$channelLabel} is available!
-            <div style="margin-top:4px;opacity:.85;font-size:12px;">
-                <a href="{$releaseUrl}" target="_blank" style="color:#fff;text-decoration:underline;">Release notes</a>
-            </div>
-        </div>
-        <div style="display:flex;gap:6px;">
-            <button onclick="pushApplyUpdate()" id="push-update-btn"
-                style="background:#fff;color:#1a73e8;border:none;padding:6px 14px;border-radius:4px;
-                cursor:pointer;font-size:12px;font-weight:600;">Update</button>
-            <button onclick="document.getElementById('push-update-banner').style.display='none'"
-                style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);
-                padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Dismiss</button>
-        </div>
-    </div>
-</div>
-<script type="text/javascript">
-(function(){
-    var banner = document.getElementById('push-update-banner');
-    if (banner) banner.style.display = 'block';
-    window.pushApplyUpdate = function() {
-        var btn = document.getElementById('push-update-btn');
-        if (!btn) return;
-        btn.textContent = 'Updating...';
-        btn.disabled = true;
-        var csrf = (window.__PUSH_CONFIG && window.__PUSH_CONFIG.csrfToken) || '';
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '{$baseUrl}/update/apply', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('X-CSRFToken', csrf);
-        xhr.onload = function() {
-            try {
-                var r = JSON.parse(xhr.responseText);
-                if (r.success) {
-                    btn.textContent = 'Done!';
-                    btn.style.background = '#34a853';
-                    btn.style.color = '#fff';
-                    banner.querySelector('strong').textContent =
-                        'Updated to v' + r.new_version;
-                    setTimeout(function(){ location.reload(); }, 2000);
-                } else {
-                    btn.textContent = 'Failed';
-                    btn.style.background = '#ea4335';
-                    btn.style.color = '#fff';
-                    alert('Update failed: ' + (r.error || 'Unknown error'));
-                    setTimeout(function(){ btn.textContent='Retry'; btn.disabled=false;
-                        btn.style.background='#fff'; btn.style.color='#1a73e8'; }, 3000);
-                }
-            } catch(e) {
-                btn.textContent = 'Error';
-                alert('Update error: ' + xhr.responseText);
+    static function buildConfigTabs($config, $base, $csrfToken) {
+        $updateBadge = '';
+        if ($config) {
+            $uj = $config->get('update_available');
+            if ($uj) {
+                $ud = json_decode($uj, true);
+                if (is_array($ud) && !empty($ud['version']))
+                    $updateBadge = '<span class="pn-badge">'
+                        . htmlspecialchars($ud['version']) . '</span>';
             }
-        };
-        xhr.onerror = function() {
-            btn.textContent = 'Error';
-            btn.disabled = false;
-            alert('Network error during update');
-        };
-        xhr.send('{}');
-    };
+        }
+
+        $tpl = <<<'ENDHTML'
+<style>
+.pn-tab-bar{display:flex;border-bottom:2px solid #ddd;margin:0 0 15px}
+.pn-tab{padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:#888;position:relative;bottom:-2px;border-bottom:2px solid transparent;transition:all .15s}
+.pn-tab:hover{color:#444}.pn-tab.pna{color:#1a73e8;border-bottom-color:#1a73e8}
+.pn-badge{background:#ea4335;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;font-weight:700}
+#pn-upd{padding:8px 0}
+.pn-card{background:#fff;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:14px;overflow:hidden}
+.pn-card-hd{padding:12px 16px;border-bottom:1px solid #e0e0e0;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:space-between}
+.pn-card-bd{padding:14px 16px}
+.pn-st{padding:11px 14px;border-radius:6px;margin-bottom:10px;font-size:13px;display:flex;align-items:center;gap:10px}
+.pn-st-ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#16a34a}
+.pn-st-av{background:#eff6ff;border:1px solid #bfdbfe;color:#1a73e8}
+.pn-st-er{background:#fef2f2;border:1px solid #fecaca;color:#dc2626}
+.pn-st-wt{background:#f0f4ff;border:1px solid #bfdbfe;color:#6b7280}
+.pn-cg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pn-co{cursor:pointer}.pn-co input{display:none}
+.pn-cc{padding:10px;border:2px solid #e0e0e0;border-radius:6px;text-align:center;transition:all .15s}
+.pn-co input:checked+.pn-cc{border-color:#1a73e8;background:#eff6ff}
+.pn-cc:hover{border-color:#93b4e8}
+.pn-cn{font-weight:700;font-size:13px}.pn-cd{font-size:10px;color:#888}
+.pn-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.pn-btn:disabled{opacity:.5;cursor:not-allowed}
+.pn-btn-p{background:#1a73e8;color:#fff}.pn-btn-p:hover:not(:disabled){background:#155ab0}
+.pn-btn-o{background:transparent;color:#333;border:1px solid #ddd}.pn-btn-o:hover:not(:disabled){background:#f6f6f6}
+.pn-btn-d{background:#dc2626;color:#fff}.pn-btn-d:hover:not(:disabled){background:#b91c1c}
+.pn-btn-s{padding:4px 10px;font-size:11px}
+.pn-dt table{width:100%;border-collapse:collapse;font-size:13px}
+.pn-dt td{padding:6px 10px;border-bottom:1px solid #e0e0e0}
+.pn-dt td:first-child{font-weight:600;width:120px;color:#888}
+.pn-pr{display:none;margin-top:10px}.pn-prb{height:5px;background:#ddd;border-radius:3px;overflow:hidden}
+.pn-prf{height:100%;background:#1a73e8;border-radius:3px;transition:width .4s;width:0}
+.pn-prt{font-size:11px;color:#888;margin-top:4px}
+.pn-log{margin-top:8px;padding:10px;background:#111827;color:#d1d5db;border-radius:5px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto;display:none;line-height:1.7}
+.pn-log .lok{color:#34d399}.pn-log .ler{color:#f87171}.pn-log .lin{color:#60a5fa}
+.pn-bkl{list-style:none;margin:0;padding:0}
+.pn-bkl li{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e0e0e0;font-size:12px}
+.pn-bkl li:last-child{border-bottom:none}
+.pn-bkn{font-weight:600}.pn-bkm{color:#888;font-size:11px}
+.pn-emp{color:#888;font-size:13px;text-align:center;padding:20px 0}
+.pn-act{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pn-sp{display:inline-block;width:14px;height:14px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:pns .6s linear infinite}
+@keyframes pns{to{transform:rotate(360deg)}}
+.pn-chb{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600}
+.pn-chb-s{background:#ecfdf5;color:#16a34a;border:1px solid #a7f3d0}
+.pn-chb-r{background:#eff6ff;color:#1a73e8;border:1px solid #bfdbfe}
+.pn-chb-b{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.pn-chb-d{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+@media(prefers-color-scheme:dark){
+.pn-card{background:#1e293b;border-color:#334155}.pn-card-hd{border-color:#334155;color:#e2e8f0}
+.pn-tab{color:#94a3b8}.pn-tab.pna{color:#3b82f6;border-bottom-color:#3b82f6}
+.pn-tab-bar{border-color:#475569}
+.pn-cc{border-color:#475569;color:#e2e8f0}.pn-co input:checked+.pn-cc{border-color:#3b82f6;background:#172554}
+.pn-btn-o{color:#e2e8f0;border-color:#475569}.pn-btn-o:hover:not(:disabled){background:#334155}
+.pn-dt td{border-color:#334155;color:#e2e8f0}.pn-dt td:first-child{color:#94a3b8}
+.pn-bkl li{border-color:#334155}.pn-emp,.pn-bkm,.pn-cd,.pn-prt{color:#94a3b8}
+.pn-cn,.pn-bkn,.pn-card-bd{color:#e2e8f0}#pn-upd{color:#e2e8f0}.pn-prb{background:#475569}
+}
+@media(max-width:600px){.pn-cg{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script>
+(function(){
+var B="__PH_BASE__",C="__PH_CSRF__",BG="__PH_BADGE__";
+var f=document.querySelector('form[action*="plugins.php?id="]');
+if(!f)return;
+var p=f.parentNode,tb=document.createElement("div");
+tb.className="pn-tab-bar";
+tb.innerHTML='<button class="pn-tab pna" data-t="s" type="button">Settings</button><button class="pn-tab" data-t="u" type="button">Updates'+BG+'</button>';
+p.insertBefore(tb,f);
+var up=document.createElement("div");up.id="pn-upd";up.style.display="none";
+up.innerHTML='<div class="pn-card"><div class="pn-card-hd">Release Channel</div><div class="pn-card-bd"><div class="pn-cg" id="pnCh">'+
+'<label class="pn-co"><input type="radio" name="pnc" value="stable"><div class="pn-cc"><div class="pn-cn">Stable</div><div class="pn-cd">Production releases</div></div></label>'+
+'<label class="pn-co"><input type="radio" name="pnc" value="rc"><div class="pn-cc"><div class="pn-cn">RC</div><div class="pn-cd">Release candidates</div></div></label>'+
+'<label class="pn-co"><input type="radio" name="pnc" value="beta"><div class="pn-cc"><div class="pn-cn">Beta</div><div class="pn-cd">May have bugs</div></div></label>'+
+'<label class="pn-co"><input type="radio" name="pnc" value="dev"><div class="pn-cc"><div class="pn-cn">Dev</div><div class="pn-cd">Latest builds</div></div></label>'+
+'</div></div></div>'+
+'<div class="pn-card"><div class="pn-card-hd"><span>Update Status</span><button class="pn-btn pn-btn-o pn-btn-s" type="button" onclick="pnCk()">Check Now</button></div>'+
+'<div class="pn-card-bd"><div id="pnS" class="pn-st pn-st-wt"><span class="pn-sp"></span><span>Checking...</span></div>'+
+'<div id="pnD" class="pn-dt" style="display:none"></div>'+
+'<div id="pnPr" class="pn-pr"><div class="pn-prb"><div id="pnPf" class="pn-prf"></div></div><div id="pnPt" class="pn-prt"></div></div>'+
+'<div id="pnLg" class="pn-log"></div><div id="pnAc" class="pn-act" style="display:none"></div></div></div>'+
+'<div class="pn-card"><div class="pn-card-hd"><span>Backups</span><button class="pn-btn pn-btn-o pn-btn-s" type="button" onclick="pnBk()">Refresh</button></div>'+
+'<div class="pn-card-bd"><div id="pnBl"><div class="pn-emp">Loading...</div></div></div></div>';
+p.insertBefore(up,f.nextSibling);
+var ld=false;
+tb.querySelectorAll(".pn-tab").forEach(function(t){t.addEventListener("click",function(){
+tb.querySelectorAll(".pn-tab").forEach(function(x){x.classList.remove("pna")});
+t.classList.add("pna");var w=t.getAttribute("data-t");
+f.style.display=w==="s"?"":"none";up.style.display=w==="u"?"":"none";
+if(w==="u"&&!ld){ld=true;pnCk();pnBk();}
+})});
+if(location.hash==="#updates")tb.querySelectorAll(".pn-tab")[1].click();
+var lc=null,cc="stable";
+function ax(m,u,b,cb){var x=new XMLHttpRequest();x.open(m,u,true);x.setRequestHeader("X-CSRFToken",C);if(b)x.setRequestHeader("Content-Type","application/json");x.onload=function(){try{cb(JSON.parse(x.responseText),null)}catch(e){cb(null,x.responseText||"Error")}};x.onerror=function(){cb(null,"Network error")};x.send(b?JSON.stringify(b):null)}
+function el(i){return document.getElementById(i)}
+function esc(s){return s?String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"):""}
+function ss(c,h){var e=el("pnS");e.className="pn-st "+c;e.innerHTML=h}
+function lg(m,t){var l=el("pnLg");l.style.display="block";var d=document.createElement("div");d.className=t?"l"+t:"";d.textContent=m;l.appendChild(d);l.scrollTop=l.scrollHeight}
+function pg(pct,t){el("pnPr").style.display="block";el("pnPf").style.width=pct+"%";el("pnPt").textContent=t}
+function chb(ch){var m={stable:["Stable","s"],rc:["RC","r"],beta:["Beta","b"],dev:["Dev","d"]};var v=m[ch]||[ch,"s"];return'<span class="pn-chb pn-chb-'+v[1]+'">'+v[0]+'</span>'}
+document.querySelectorAll("#pnCh input[name=pnc]").forEach(function(r){r.addEventListener("change",function(){
+if(this.value===cc)return;var nv=this.value;
+ax("POST",B+"/update/channel",{channel:nv},function(res,err){if(err||!res||!res.success){sc(cc);return}cc=nv;pnCk()})})});
+function sc(ch){cc=ch;document.querySelectorAll("#pnCh input[name=pnc]").forEach(function(r){r.checked=r.value===ch})}
+window.pnCk=function(){
+ss("pn-st-wt",'<span class="pn-sp"></span><span>Checking...</span>');
+el("pnD").style.display="none";el("pnAc").style.display="none";
+el("pnLg").style.display="none";el("pnLg").innerHTML="";el("pnPr").style.display="none";
+ax("GET",B+"/update/check",null,function(r,err){
+if(err){ss("pn-st-er","&#10060; "+esc(err));return}
+lc=r;if(r.current_channel)sc(r.current_channel);
+var b=chb(r.channel||cc);
+if(r.error){ss("pn-st-er","&#10060; "+esc(r.error)+" "+b);return}
+if(r.available){
+ss("pn-st-av","&#128640; <strong>v"+esc(r.latest_version)+"</strong> "+b+" available!");
+var d="<table><tr><td>New</td><td><strong>v"+esc(r.latest_version)+"</strong></td></tr>";
+d+="<tr><td>Channel</td><td>"+b+"</td></tr><tr><td>Installed</td><td>v"+esc(r.current_version)+"</td></tr>";
+if(r.published_at)d+="<tr><td>Published</td><td>"+new Date(r.published_at).toLocaleDateString()+"</td></tr>";
+d+="</table>";el("pnD").innerHTML=d;el("pnD").style.display="block";
+el("pnAc").style.display="flex";
+el("pnAc").innerHTML='<button class="pn-btn pn-btn-p" type="button" id="pnUb" onclick="pnAp()">Update to v'+esc(r.latest_version)+'</button>'+
+(r.html_url?'<a href="'+esc(r.html_url)+'" target="_blank" class="pn-btn pn-btn-o">GitHub</a>':"");
+}else{ss("pn-st-ok","&#9989; Up to date "+b+" (v"+esc(r.current_version)+")")}
+})};
+window.pnAp=function(){
+if(!lc||!lc.available)return;
+if(!confirm("Update to v"+lc.latest_version+"?\n\n1. Backup files + DB\n2. Download from GitHub\n3. Replace files\n4. Run migrations"))return;
+var btn=el("pnUb");if(btn){btn.disabled=true;btn.innerHTML='<span class="pn-sp"></span> Updating...';}
+el("pnLg").style.display="block";el("pnLg").innerHTML="";
+lg("Starting update...","in");pg(10,"Creating backup...");
+setTimeout(function(){pg(30,"Downloading...")},500);
+setTimeout(function(){pg(60,"Installing...")},1200);
+ax("POST",B+"/update/apply",{},function(r,err){
+if(err){pg(100,"Failed");lg("ERROR: "+err,"er");if(btn){btn.disabled=false;btn.innerHTML="Retry"}return}
+if(r.success){pg(100,"Done!");lg("Updated to v"+r.new_version,"ok");
+ss("pn-st-ok","&#9989; Updated to <strong>v"+esc(r.new_version)+"</strong>");
+el("pnAc").innerHTML='<button class="pn-btn pn-btn-o" type="button" onclick="location.reload()">Refresh Page</button>';pnBk();
+}else{pg(100,"Failed");lg("ERROR: "+(r.error||"Unknown"),"er");if(btn){btn.disabled=false;btn.innerHTML="Retry"}}
+})};
+window.pnBk=function(){
+el("pnBl").innerHTML='<div class="pn-emp">Loading...</div>';
+ax("GET",B+"/update/backups",null,function(r,err){
+if(err||!r){el("pnBl").innerHTML='<div class="pn-emp">Failed to load</div>';return}
+var b=r.backups||[];
+if(!b.length){el("pnBl").innerHTML='<div class="pn-emp">No backups yet</div>';return}
+var h='<ul class="pn-bkl">';
+b.forEach(function(k){h+='<li><div><span class="pn-bkn">v'+esc(k.version)+'</span><br><span class="pn-bkm">'+esc(k.date)+'</span></div><button class="pn-btn pn-btn-d pn-btn-s" type="button" data-p="'+esc(k.path)+'" onclick="pnRb(this.dataset.p)">Restore</button></li>'});
+h+='</ul>';el("pnBl").innerHTML=h;
+})};
+window.pnRb=function(path){
+if(!confirm("Restore from this backup?\nCurrent files and DB tables will be replaced."))return;
+ss("pn-st-wt",'<span class="pn-sp"></span><span>Rolling back...</span>');
+ax("POST",B+"/update/rollback",{backup_path:path},function(r,err){
+if(err){ss("pn-st-er","&#10060; "+esc(err));return}
+if(r.success){ss("pn-st-ok","&#9989; Restored to <strong>v"+(r.restored_version||"?")+"</strong>");pnBk()}
+else{ss("pn-st-er","&#10060; "+(r.error||"Failed"))}
+})};
 })();
 </script>
-HTML;
+ENDHTML;
+
+        return str_replace(
+            array('"__PH_BASE__"', '"__PH_CSRF__"', '"__PH_BADGE__"'),
+            array(json_encode($base), json_encode($csrfToken), json_encode($updateBadge)),
+            $tpl
+        );
     }
 
     /**
