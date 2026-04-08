@@ -419,7 +419,7 @@ class PushUpdater {
 
         // Validate plugin.php is ours
         $manifest = @include $sourceDir . 'plugin.php';
-        if (!is_array($manifest) || ($manifest['id'] ?? '') !== 'osticket:push-notifications') {
+        if (!is_array($manifest) || ($manifest['id'] ?? '') !== 'chesnotech:push-notifications') {
             $this->removeDirectory($extractDir);
             return array('success' => false, 'error' => 'Invalid plugin manifest in release');
         }
