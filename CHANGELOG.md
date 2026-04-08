@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-08
+
+### Fixed
+- Change plugin ID from `osticket:push-notifications` to `chesnotech:push-notifications` — the `osticket:` namespace is reserved for official plugins; third-party plugins must use their own vendor prefix
+
 ## [1.3.0] - 2026-04-08
 
 ### Added
@@ -72,6 +77,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Subscription cleanup on cron
 - Multilingual README (8 languages)
 
+[1.3.1]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.2.0
 [1.1.1]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.1
