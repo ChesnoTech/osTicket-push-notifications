@@ -106,20 +106,82 @@ class PushUpdater {
     }
 
     /**
-     * Perform the full update process:
-     * 1. Check for update
-     * 2. Backup current files + DB tables
-     * 3. Download new release
-     * 4. Extract and replace files
-     * 5. Run database migrations
+     * Check for both minor and major updates.
+     * Minor = same major version (safe, backward-compatible).
+     * Major = higher major version (may include breaking changes).
      */
-    function performUpdate() {
-        $check = $this->checkForUpdate();
-        if (!$check['available'])
-            return array('success' => false, 'error' => 'No update available');
+    function checkForUpdates($channel = null) {
+        $current = $this->getCurrentVersion();
+        if (!$channel)
+            $channel = $this->getChannel();
 
-        $version = $check['latest_version'];
-        $downloadUrl = $check['download_url'];
+        $releases = $this->fetchAllForChannel($channel);
+        if (empty($releases))
+            return array(
+                'current_version' => $current,
+                'channel'         => $channel,
+                'minor'           => null,
+                'major'           => null,
+                'error'           => 'Could not reach GitHub API or no releases found',
+            );
+
+        $currentMajor = (int) explode('.', explode('-', $current)[0])[0];
+
+        $minorRel = null;
+        $minorVer = '0.0.0';
+        $majorRel = null;
+        $majorVer = '0.0.0';
+
+        foreach ($releases as $rel) {
+            $ver = ltrim($rel['tag_name'] ?? '', 'vV');
+            if (!$ver || version_compare($ver, $current, '<='))
+                continue;
+
+            $relMajor = (int) explode('.', explode('-', $ver)[0])[0];
+
+            if ($relMajor === $currentMajor && version_compare($ver, $minorVer, '>')) {
+                $minorRel = $rel;
+                $minorVer = $ver;
+            } elseif ($relMajor > $currentMajor && version_compare($ver, $majorVer, '>')) {
+                $majorRel = $rel;
+                $majorVer = $ver;
+            }
+        }
+
+        return array(
+            'current_version' => $current,
+            'channel'         => $channel,
+            'minor'           => $minorRel ? $this->formatRelease($minorRel, $channel) : null,
+            'major'           => $majorRel ? $this->formatRelease($majorRel, $channel) : null,
+        );
+    }
+
+    /**
+     * Perform the full update process.
+     * If $targetVersion is specified, installs that exact version.
+     * Otherwise falls back to latest on the configured channel.
+     */
+    function performUpdate($targetVersion = null) {
+        $current = $this->getCurrentVersion();
+
+        if ($targetVersion) {
+            $release = $this->fetchReleaseByVersion($targetVersion);
+            if (!$release)
+                return array('success' => false, 'error' => 'Release v' . $targetVersion . ' not found on GitHub');
+
+            $version = ltrim($release['tag_name'] ?? '', 'vV');
+            $downloadUrl = $release['zipball_url'] ?? '';
+
+            if (version_compare($version, $current, '<='))
+                return array('success' => false, 'error' => 'v' . $version . ' is not newer than current v' . $current);
+        } else {
+            $check = $this->checkForUpdate();
+            if (!$check['available'])
+                return array('success' => false, 'error' => 'No update available');
+
+            $version = $check['latest_version'];
+            $downloadUrl = $check['download_url'];
+        }
 
         if (!$downloadUrl)
             return array('success' => false, 'error' => 'No download URL in release');
@@ -532,6 +594,76 @@ class PushUpdater {
         }
 
         return null;
+    }
+
+    /**
+     * Fetch ALL eligible releases for a channel (not just the latest).
+     * Used by checkForUpdates() to find both minor and major candidates.
+     */
+    private function fetchAllForChannel($channel) {
+        $releases = $this->githubGet('/releases?per_page=50');
+        if (!is_array($releases))
+            return array();
+
+        $allowedSuffixes = $this->channelSuffixes($channel);
+        $eligible = array();
+
+        foreach ($releases as $rel) {
+            if (!is_array($rel) || empty($rel['tag_name']) || !empty($rel['draft']))
+                continue;
+
+            // Stable (non-prerelease) always eligible
+            if (!$rel['prerelease']) {
+                $eligible[] = $rel;
+                continue;
+            }
+
+            // For pre-release channels, check suffix
+            if ($channel !== 'stable') {
+                $tag = ltrim($rel['tag_name'], 'vV');
+                foreach ($allowedSuffixes as $suffix) {
+                    if (stripos($tag, '-' . $suffix . '.') !== false) {
+                        $eligible[] = $rel;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $eligible;
+    }
+
+    /**
+     * Fetch a specific release by version tag.
+     * Tries both v-prefixed and plain tags.
+     */
+    private function fetchReleaseByVersion($version) {
+        $ver = ltrim($version, 'vV');
+        $release = $this->githubGet('/releases/tags/v' . $ver);
+        if (is_array($release) && !empty($release['tag_name']))
+            return $release;
+
+        $release = $this->githubGet('/releases/tags/' . $ver);
+        if (is_array($release) && !empty($release['tag_name']))
+            return $release;
+
+        return null;
+    }
+
+    /**
+     * Format a GitHub release array into a clean response object.
+     */
+    private function formatRelease($release, $channel) {
+        return array(
+            'version'       => ltrim($release['tag_name'] ?? '', 'vV'),
+            'prerelease'    => !empty($release['prerelease']),
+            'release_name'  => $release['name'] ?? '',
+            'release_notes' => $release['body'] ?? '',
+            'published_at'  => $release['published_at'] ?? '',
+            'download_url'  => $release['zipball_url'] ?? '',
+            'html_url'      => $release['html_url'] ?? '',
+            'channel'       => $channel,
+        );
     }
 
     /**

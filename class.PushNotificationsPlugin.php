@@ -233,10 +233,17 @@ class PushNotificationsPlugin extends Plugin {
 .pn-btn-p{background:#1a73e8;color:#fff}.pn-btn-p:hover:not(:disabled){background:#155ab0}
 .pn-btn-o{background:transparent;color:#333;border:1px solid #ddd}.pn-btn-o:hover:not(:disabled){background:#f6f6f6}
 .pn-btn-d{background:#dc2626;color:#fff}.pn-btn-d:hover:not(:disabled){background:#b91c1c}
+.pn-btn-w{background:#d97706;color:#fff}.pn-btn-w:hover:not(:disabled){background:#b45309}
 .pn-btn-s{padding:4px 10px;font-size:11px}
 .pn-dt table{width:100%;border-collapse:collapse;font-size:13px}
 .pn-dt td{padding:6px 10px;border-bottom:1px solid #e0e0e0}
 .pn-dt td:first-child{font-weight:600;width:120px;color:#888}
+.pn-uc{border:1px solid #e0e0e0;border-radius:6px;padding:12px 14px;margin-bottom:10px}
+.pn-uc-mi{border-left:3px solid #16a34a}
+.pn-uc-ma{border-left:3px solid #d97706}
+.pn-uc-tl{font-weight:700;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.pn-uc-mi .pn-uc-tl{color:#16a34a}.pn-uc-ma .pn-uc-tl{color:#d97706}
+.pn-uc-wr{font-size:11px;color:#d97706;margin:6px 0 2px;padding:6px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:4px}
 .pn-pr{display:none;margin-top:10px}.pn-prb{height:5px;background:#ddd;border-radius:3px;overflow:hidden}
 .pn-prf{height:100%;background:#1a73e8;border-radius:3px;transition:width .4s;width:0}
 .pn-prt{font-size:11px;color:#888;margin-top:4px}
@@ -264,6 +271,9 @@ class PushNotificationsPlugin extends Plugin {
 .pn-dt td{border-color:#334155;color:#e2e8f0}.pn-dt td:first-child{color:#94a3b8}
 .pn-bkl li{border-color:#334155}.pn-emp,.pn-bkm,.pn-cd,.pn-prt{color:#94a3b8}
 .pn-cn,.pn-bkn,.pn-card-bd{color:#e2e8f0}#pn-upd{color:#e2e8f0}.pn-prb{background:#475569}
+.pn-uc{border-color:#475569}.pn-uc-mi{border-left-color:#22c55e}.pn-uc-ma{border-left-color:#eab308}
+.pn-uc-mi .pn-uc-tl{color:#22c55e}.pn-uc-ma .pn-uc-tl{color:#eab308}
+.pn-uc-wr{background:#422006;border-color:#854d0e;color:#eab308}
 }
 @media(max-width:600px){.pn-cg{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -283,11 +293,11 @@ up.innerHTML='<div class="pn-card"><div class="pn-card-hd">Release Channel</div>
 '<label class="pn-co"><input type="radio" name="pnc" value="beta"><div class="pn-cc"><div class="pn-cn">Beta</div><div class="pn-cd">May have bugs</div></div></label>'+
 '<label class="pn-co"><input type="radio" name="pnc" value="dev"><div class="pn-cc"><div class="pn-cn">Dev</div><div class="pn-cd">Latest builds</div></div></label>'+
 '</div></div></div>'+
-'<div class="pn-card"><div class="pn-card-hd"><span>Update Status</span><button class="pn-btn pn-btn-o pn-btn-s" type="button" onclick="pnCk()">Check Now</button></div>'+
-'<div class="pn-card-bd"><div id="pnS" class="pn-st pn-st-wt"><span class="pn-sp"></span><span>Checking...</span></div>'+
+'<div class="pn-card"><div class="pn-card-hd"><span>Available Updates</span><button class="pn-btn pn-btn-o pn-btn-s" type="button" onclick="pnCk()">Check Now</button></div>'+
+'<div class="pn-card-bd"><div id="pnS" class="pn-st pn-st-wt"><span class="pn-sp"></span><span>Checking for updates...</span></div>'+
 '<div id="pnD" class="pn-dt" style="display:none"></div>'+
 '<div id="pnPr" class="pn-pr"><div class="pn-prb"><div id="pnPf" class="pn-prf"></div></div><div id="pnPt" class="pn-prt"></div></div>'+
-'<div id="pnLg" class="pn-log"></div><div id="pnAc" class="pn-act" style="display:none"></div></div></div>'+
+'<div id="pnLg" class="pn-log"></div></div></div>'+
 '<div class="pn-card"><div class="pn-card-hd"><span>Backups</span><button class="pn-btn pn-btn-o pn-btn-s" type="button" onclick="pnBk()">Refresh</button></div>'+
 '<div class="pn-card-bd"><div id="pnBl"><div class="pn-emp">Loading...</div></div></div></div>';
 p.insertBefore(up,f.nextSibling);
@@ -311,40 +321,57 @@ document.querySelectorAll("#pnCh input[name=pnc]").forEach(function(r){r.addEven
 if(this.value===cc)return;var nv=this.value;
 ax("POST",B+"/update/channel",{channel:nv},function(res,err){if(err||!res||!res.success){sc(cc);return}cc=nv;pnCk()})})});
 function sc(ch){cc=ch;document.querySelectorAll("#pnCh input[name=pnc]").forEach(function(r){r.checked=r.value===ch})}
+function updCard(type,info,cur){
+var isMa=type==="major",cls=isMa?"pn-uc pn-uc-ma":"pn-uc pn-uc-mi";
+var title=isMa?"Major Update":"Minor Update";
+var b=chb(info.channel||cc);
+var h='<div class="'+cls+'"><div class="pn-uc-tl">'+title+'</div>';
+h+='<table><tr><td>Version</td><td><strong>v'+esc(info.version)+'</strong> '+b+'</td></tr>';
+h+='<tr><td>Installed</td><td>v'+esc(cur)+'</td></tr>';
+if(info.published_at)h+='<tr><td>Published</td><td>'+new Date(info.published_at).toLocaleDateString()+'</td></tr>';
+h+='</table>';
+if(isMa)h+='<div class="pn-uc-wr">&#9888; Major upgrades may include breaking changes. Review release notes before upgrading.</div>';
+h+='<div class="pn-act">';
+h+='<button class="pn-btn '+(isMa?'pn-btn-w':'pn-btn-p')+'" type="button" onclick="pnAp(\''+esc(info.version)+'\')">'+(isMa?'Upgrade':'Update')+' to v'+esc(info.version)+'</button>';
+if(info.html_url)h+='<a href="'+esc(info.html_url)+'" target="_blank" class="pn-btn pn-btn-o">Release Notes</a>';
+h+='</div></div>';return h}
 window.pnCk=function(){
-ss("pn-st-wt",'<span class="pn-sp"></span><span>Checking...</span>');
-el("pnD").style.display="none";el("pnAc").style.display="none";
+ss("pn-st-wt",'<span class="pn-sp"></span><span>Checking for updates...</span>');
+el("pnD").style.display="none";
 el("pnLg").style.display="none";el("pnLg").innerHTML="";el("pnPr").style.display="none";
 ax("GET",B+"/update/check",null,function(r,err){
 if(err){ss("pn-st-er","&#10060; "+esc(err));return}
 lc=r;if(r.current_channel)sc(r.current_channel);
 var b=chb(r.channel||cc);
 if(r.error){ss("pn-st-er","&#10060; "+esc(r.error)+" "+b);return}
-if(r.available){
-ss("pn-st-av","&#128640; <strong>v"+esc(r.latest_version)+"</strong> "+b+" available!");
-var d="<table><tr><td>New</td><td><strong>v"+esc(r.latest_version)+"</strong></td></tr>";
-d+="<tr><td>Channel</td><td>"+b+"</td></tr><tr><td>Installed</td><td>v"+esc(r.current_version)+"</td></tr>";
-if(r.published_at)d+="<tr><td>Published</td><td>"+new Date(r.published_at).toLocaleDateString()+"</td></tr>";
-d+="</table>";el("pnD").innerHTML=d;el("pnD").style.display="block";
-el("pnAc").style.display="flex";
-el("pnAc").innerHTML='<button class="pn-btn pn-btn-p" type="button" id="pnUb" onclick="pnAp()">Update to v'+esc(r.latest_version)+'</button>'+
-(r.html_url?'<a href="'+esc(r.html_url)+'" target="_blank" class="pn-btn pn-btn-o">GitHub</a>':"");
-}else{ss("pn-st-ok","&#9989; Up to date "+b+" (v"+esc(r.current_version)+")")}
+var hasMinor=r.minor&&r.minor.version;
+var hasMajor=r.major&&r.major.version;
+if(!hasMinor&&!hasMajor){ss("pn-st-ok","&#9989; Up to date "+b+" (v"+esc(r.current_version)+")");return}
+var parts=[];
+if(hasMinor)parts.push("Minor v"+esc(r.minor.version));
+if(hasMajor)parts.push("Major v"+esc(r.major.version));
+ss("pn-st-av","&#128640; "+parts.join(" &middot; ")+" available "+b);
+var d="";
+if(hasMinor)d+=updCard("minor",r.minor,r.current_version);
+if(hasMajor)d+=updCard("major",r.major,r.current_version);
+el("pnD").innerHTML=d;el("pnD").style.display="block";
 })};
-window.pnAp=function(){
-if(!lc||!lc.available)return;
-if(!confirm("Update to v"+lc.latest_version+"?\n\n1. Backup files + DB\n2. Download from GitHub\n3. Replace files\n4. Run migrations"))return;
-var btn=el("pnUb");if(btn){btn.disabled=true;btn.innerHTML='<span class="pn-sp"></span> Updating...';}
+window.pnAp=function(version){
+if(!version)return;
+var isMa=lc&&lc.major&&lc.major.version===version;
+var label=isMa?"major upgrade":"minor update";
+if(!confirm((isMa?"MAJOR UPGRADE":"Update")+" to v"+version+"?\n\n1. Backup current files + DB\n2. Download v"+version+" from GitHub\n3. Replace plugin files\n4. Run database migrations"+(isMa?"\n\nMajor upgrades may include breaking changes.":"")))return;
 el("pnLg").style.display="block";el("pnLg").innerHTML="";
-lg("Starting update...","in");pg(10,"Creating backup...");
-setTimeout(function(){pg(30,"Downloading...")},500);
+lg("Starting "+label+" to v"+version+"...","in");pg(10,"Creating backup...");
+setTimeout(function(){pg(30,"Downloading v"+version+"...")},500);
 setTimeout(function(){pg(60,"Installing...")},1200);
-ax("POST",B+"/update/apply",{},function(r,err){
-if(err){pg(100,"Failed");lg("ERROR: "+err,"er");if(btn){btn.disabled=false;btn.innerHTML="Retry"}return}
-if(r.success){pg(100,"Done!");lg("Updated to v"+r.new_version,"ok");
+ax("POST",B+"/update/apply",{version:version},function(r,err){
+if(err){pg(100,"Failed");lg("ERROR: "+err,"er");return}
+if(r.success){pg(100,"Done!");lg("Successfully updated to v"+r.new_version,"ok");
 ss("pn-st-ok","&#9989; Updated to <strong>v"+esc(r.new_version)+"</strong>");
-el("pnAc").innerHTML='<button class="pn-btn pn-btn-o" type="button" onclick="location.reload()">Refresh Page</button>';pnBk();
-}else{pg(100,"Failed");lg("ERROR: "+(r.error||"Unknown"),"er");if(btn){btn.disabled=false;btn.innerHTML="Retry"}}
+el("pnD").innerHTML='<div class="pn-act"><button class="pn-btn pn-btn-o" type="button" onclick="location.reload()">Refresh Page</button></div>';
+el("pnD").style.display="block";pnBk();
+}else{pg(100,"Failed");lg("ERROR: "+(r.error||"Unknown"),"er")}
 })};
 window.pnBk=function(){
 el("pnBl").innerHTML='<div class="pn-emp">Loading...</div>';
