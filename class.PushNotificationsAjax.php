@@ -366,7 +366,7 @@ class PushNotificationsAjax extends AjaxController {
         // Allow ?channel=beta override for one-off checks
         $channel = (isset($_GET['channel']) && in_array($_GET['channel'], PushUpdater::CHANNELS, true))
             ? $_GET['channel'] : null;
-        $result = $updater->checkForUpdate($channel);
+        $result = $updater->checkForUpdates($channel);
         $result['channels'] = PushUpdater::CHANNELS;
         $result['current_channel'] = $updater->getChannel();
 
@@ -419,9 +419,14 @@ class PushNotificationsAjax extends AjaxController {
         @set_time_limit(300);
         @ini_set('memory_limit', '256M');
 
+        $body = file_get_contents('php://input');
+        $data = json_decode($body, true);
+        $targetVersion = (is_array($data) && !empty($data['version']))
+            ? $data['version'] : null;
+
         require_once dirname(__FILE__) . '/class.PushUpdater.php';
         $updater = new PushUpdater();
-        $result = $updater->performUpdate();
+        $result = $updater->performUpdate($targetVersion);
 
         // Clear update_available flag on success
         if ($result['success']) {

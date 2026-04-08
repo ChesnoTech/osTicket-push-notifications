@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-08
+
+### Added
+- Minor vs major update detection — admin can see and choose between minor (same major version, safe) and major (new major version, may break) updates
+- Separate update cards with distinct styling: green for minor, amber for major
+- Version-targeted updates — admin selects exactly which version to install
+- Breaking change warning on major upgrade cards
+- `checkForUpdates()` method scans all releases to find best minor and best major candidate
+- `fetchAllForChannel()` method retrieves all eligible releases for a channel
+- `fetchReleaseByVersion()` method fetches a specific release by tag for targeted installs
+
+### Changed
+- Update check API now returns `{minor, major}` objects instead of a single flat result
+- Apply update API now accepts `{version}` in POST body to target a specific release
+- "Update Status" card renamed to "Available Updates" with enhanced layout
+
 ## [1.2.0] - 2026-04-07
 
 ### Changed
@@ -56,6 +72,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Subscription cleanup on cron
 - Multilingual README (8 languages)
 
+[1.3.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.2.0
 [1.1.1]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ChesnoTech/osTicket-push-notifications/releases/tag/v1.1.0
